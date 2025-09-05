@@ -1,0 +1,9 @@
+{
+  "title": "New Task",
+  "description": "Task description",
+  "due_date": "2023-10-15T12:00:00Z",
+  "priority": "medium",
+  "task_list_id": "uuid",
+  "assignee_id": "uuid",
+  "tags": ["urgent", "frontend"]
+}

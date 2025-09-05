@@ -1,0 +1,16 @@
+[
+  {
+    "id": "uuid",
+    "title": "Implement user authentication",
+    "description": "Setup JWT authentication",
+    "position": 1,
+    "due_date": "2023-10-15T12:00:00Z",
+    "priority": "high",
+    "task_list_id": "uuid",
+    "project_id": "uuid",
+    "creator_id": "uuid",
+    "assignee_id": "uuid",
+    "created_at": "2023-10-01T12:00:00Z",
+    "tags": ["backend", "auth"]
+  }
+]

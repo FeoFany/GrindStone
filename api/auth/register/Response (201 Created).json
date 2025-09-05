@@ -1,0 +1,8 @@
+{
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "name": "John Doe"
+  },
+  "access_token": "jwt_token"
+}

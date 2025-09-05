@@ -1,0 +1,232 @@
+1. Расширения и пользовательские типы
+sql
+
+-- Включение расширения для генерации UUID
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+    uuid-ossp - расширение PostgreSQL для генерации UUID (уникальных идентификаторов)
+
+    UUID предпочтительнее последовательных ID для безопасности и масштабируемости
+
+sql
+
+-- Создание пользовательских типов для ограничения значений
+CREATE TYPE workspace_role AS ENUM ('owner', 'admin', 'member');
+CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+
+    ENUM типы ограничивают возможные значения для полей
+
+    workspace_role - возможные роли пользователей в рабочих пространствах
+
+    task_priority - возможные уровни приоритета задач
+
+2. Вспомогательная функция
+sql
+
+-- Функция для автоматического обновления поля updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+    Функция, которая автоматически обновляет поле updated_at текущим временем
+
+    Будет вызываться триггерами при обновлении записей
+
+3. Таблицы базы данных
+Таблица пользователей (users)
+sql
+
+CREATE TABLE "users" (
+  "id" uuid UNIQUE PRIMARY KEY DEFAULT (uuid_generate_v4()),
+  "email" varchar(255) UNIQUE NOT NULL,
+  "password_hash" varchar(255) NOT NULL,
+  "name" varchar(255),
+  "avatar_url" text,
+  "email_verified" timestamp DEFAULT NULL,
+  "created_at" timestamp DEFAULT (now()),
+  "updated_at" timestamp DEFAULT (now())
+);
+
+    Хранит информацию о пользователях
+
+    password_hash - хранит хэш пароля (никогда сам пароль)
+
+    email_verified - отметка о подтверждении email
+
+Таблица рабочих пространств (workspaces)
+sql
+
+CREATE TABLE "workspaces" (
+  "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+  "name" varchar(255) NOT NULL,
+  "description" text,
+  "owner_id" uuid NOT NULL,
+  "created_at" timestamp DEFAULT (now()),
+  "updated_at" timestamp DEFAULT (now())
+);
+
+    Рабочие пространства (например, "Маркетинг", "Разработка")
+
+    Каждое пространство имеет владельца (owner_id)
+
+Таблица участников рабочих пространств (workspace_members)
+sql
+
+CREATE TABLE "workspace_members" (
+  "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+  "workspace_id" uuid NOT NULL,
+  "user_id" uuid NOT NULL,
+  "role" workspace_role DEFAULT 'member',
+  "created_at" timestamp DEFAULT (now()),
+  "updated_at" timestamp DEFAULT (now())
+);
+
+    Связывает пользователей и рабочие пространства (многие-ко-многим)
+
+    Определяет роль пользователя в пространстве
+
+Таблица проектов (projects)
+sql
+
+CREATE TABLE "projects" (
+  "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+  "name" varchar(255) NOT NULL,
+  "description" text,
+  "color" varchar(20),
+  "workspace_id" uuid NOT NULL,
+  "owner_id" uuid NOT NULL,
+  "created_at" timestamp DEFAULT (now()),
+  "updated_at" timestamp DEFAULT (now())
+);
+
+    Проекты внутри рабочих пространств
+
+    Принадлежат определенному workspace и имеют владельца
+
+Таблица списков задач (task_lists)
+sql
+
+CREATE TABLE "task_lists" (
+  "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+  "name" varchar(255) NOT NULL DEFAULT 'To Do',
+  "position" int,
+  "project_id" uuid NOT NULL,
+  "created_at" timestamp DEFAULT (now()),
+  "updated_at" timestamp DEFAULT (now())
+);
+
+    Колонки на Kanban-доске ("К выполнению", "В работе", "Готово")
+
+    position определяет порядок отображения списков
+
+Таблица задач (tasks)
+sql
+
+CREATE TABLE "tasks" (
+  "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+  "title" varchar(500) NOT NULL,
+  "description" text,
+  "position" int,
+  "due_date" timestamp,
+  "priority" task_priority DEFAULT 'medium',
+  "task_list_id" uuid NOT NULL,
+  "project_id" uuid NOT NULL,
+  "creator_id" uuid NOT NULL,
+  "assignee_id" uuid,
+  "created_at" timestamp DEFAULT (now()),
+  "updated_at" timestamp DEFAULT (now())
+);
+
+    Основная таблица для хранения задач
+
+    position - порядок задач внутри списка (для Drag & Drop)
+
+    assignee_id - исполнитель задачи (может быть NULL)
+
+Остальные таблицы
+
+    task_attachments - вложения к задачам (файлы)
+
+    pages - вики-страницы с содержимым в формате JSON
+
+    links - сохраненные веб-ссылки с мета-информацией
+
+    comments - комментарии к задачам
+
+    tags - теги для categorizing задач
+
+    task_tags - связь многие-ко-многим между задачами и тегами
+
+4. Индексы
+sql
+
+-- Создание индексов для улучшения производительности
+CREATE UNIQUE INDEX "workspace_members_workspace_id_user_id_idx" ON "workspace_members" ("workspace_id", "user_id");
+CREATE UNIQUE INDEX "task_tags_task_id_tag_id_idx" ON "task_tags" ("task_id", "tag_id");
+
+    Уникальные индексы предотвращают дублирование связей
+
+sql
+
+-- Индексы для внешних ключей
+CREATE INDEX "workspaces_owner_id_idx" ON "workspaces" ("owner_id");
+CREATE INDEX "workspace_members_workspace_id_idx" ON "workspace_members" ("workspace_id");
+-- ... и другие индексы
+
+    Индексы ускоряют поиск и соединения (JOIN) таблиц
+
+    Особенно важны для часто используемых полей
+
+5. Внешние ключи (Foreign Keys)
+sql
+
+-- Добавление внешних ключей с каскадным удалением где это уместно
+ALTER TABLE "workspaces" ADD FOREIGN KEY ("owner_id") REFERENCES "users" ("id");
+ALTER TABLE "workspace_members" ADD FOREIGN KEY ("workspace_id") REFERENCES "workspaces" ("id") ON DELETE CASCADE;
+-- ... и другие внешние ключи
+
+    Обеспечивают целостность данных между таблицами
+
+    ON DELETE CASCADE - при удалении родительской записи автоматически удаляются дочерние
+
+    Без CASCADE - удаление родительской записи запрещено, если есть ссылающиеся дочерние
+
+6. Триггеры
+sql
+
+-- Создание триггеров для автоматического обновления updated_at
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON "users"
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+-- ... и другие триггеры
+
+    Триггеры автоматически обновляют поле updated_at при изменении записи
+
+    BEFORE UPDATE - выполняется перед операцией обновления
+
+    FOR EACH ROW - выполняется для каждой изменяемой строки
+
+Как использовать этот скрипт:
+
+    Подключитесь к вашей PostgreSQL базе данных
+
+    Выполните этот скрипт целиком
+
+    Для проверки: \dt - покажет список созданных таблиц
+
+Рекомендации по дальнейшим шагам:
+
+    Наполнение тестовыми данными: Создайте скрипт с INSERT-запросами для тестирования
+
+    Резервное копирование: Настройте регулярное резервное копирование базы данных
+
+    Миграции: Для будущих изменений структуры используйте систему миграций (например, Flyway или Prisma Migrate)
+
+    Оптимизация: При большом объеме данных может потребоваться дополнительная оптимизация индексов
+
+Это отличная основа для вашего приложения! Структура хорошо продумана и следует лучшим практикам проектирования баз данных.

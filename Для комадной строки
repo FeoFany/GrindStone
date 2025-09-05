@@ -1,0 +1,26 @@
+
+Управление тегами
+
+    GET /api/projects/:projectId/tags - Получить все теги проекта
+
+    POST /api/projects/:projectId/tags - Создать новый тег
+
+    DELETE /api/tags/:id - Удалить тег
+
+Комментарии к задачам
+
+    GET /api/tasks/:taskId/comments - Получить комментарии задачи
+
+    POST /api/tasks/:taskId/comments - Добавить комментарий
+
+    DELETE /api/comments/:id - Удалить комментарий
+
+Страницы базы знаний
+
+    GET /api/projects/:projectId/pages - Получить все страницы проекта
+
+    POST /api/projects/:projectId/pages - Создать новую страницу
+
+    PUT /api/pages/:id - Обновить страницу
+
+    DELETE /api/pages/:id - Удалить страницу

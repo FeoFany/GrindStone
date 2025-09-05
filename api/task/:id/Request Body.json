@@ -1,0 +1,9 @@
+{
+  "title": "Updated Task Title",
+  "description": "Updated description",
+  "due_date": "2023-10-20T12:00:00Z",
+  "priority": "high",
+  "task_list_id": "uuid",
+  "assignee_id": "uuid",
+  "tags": ["updated", "backend"]
+}
